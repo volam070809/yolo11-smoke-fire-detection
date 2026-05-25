@@ -1,0 +1,34 @@
+# ================================================================
+# data.yaml  –  YOLO11 Smoke & Fire Detection Dataset Config
+# ================================================================
+# BUG ĐÃ SỬA:
+#   1. Thêm nc: 1 (số lượng class) – bắt buộc phải khai báo rõ
+#   2. Đường dẫn dùng forward-slash, tương thích cả Windows/Linux
+#   3. Thêm ghi chú rõ ràng về cách mở rộng sang 2 class (fire + smoke)
+# ================================================================
+
+path: datasets/fire_data       # thư mục gốc của dataset (tính từ nơi chạy script)
+train: train/images            # ảnh train
+val: valid/images              # ảnh validation  ← tên thư mục là "valid", KHÔNG phải "val"
+test: test/images              # ảnh test
+
+# Số lượng class  ← THIẾU trong file gốc, một số phiên bản ultralytics báo lỗi
+nc: 1
+
+# Tên class theo đúng thứ tự index
+names:
+  0: fire
+
+# ================================================================
+# HƯỚNG DẪN MỞ RỘNG SANG 2 CLASS (fire + smoke):
+#   Bước 1: Annotate lại toàn bộ ảnh trong dataset, đặt:
+#             class 0 = fire (lửa)
+#             class 1 = smoke (khói)
+#   Bước 2: Đổi nc: 1 → nc: 2
+#   Bước 3: Thêm "1: smoke" vào names
+#
+#   nc: 2
+#   names:
+#     0: fire
+#     1: smoke
+# ================================================================

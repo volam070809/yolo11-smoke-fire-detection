@@ -1,0 +1,20 @@
+# requirements.txt  –  YOLO11 Smoke & Fire Detection
+# ======================================================
+# Cài đặt: pip install -r requirements.txt
+
+# Core (bắt buộc)
+ultralytics>=8.3.0     # YOLO11 framework
+opencv-python>=4.8.0   # xử lý ảnh/video
+matplotlib>=3.7.0      # vẽ biểu đồ kết quả
+
+# Thêm vào so với bản gốc (khuyến nghị)
+pyyaml>=6.0            # đọc data.yaml trong check_dataset.py
+torch>=2.0.0           # PyTorch (ultralytics sẽ tự cài nếu chưa có)
+numpy>=1.24.0          # xử lý mảng số
+
+# Tùy chọn (nếu dùng GPU NVIDIA)
+# torch>=2.0.0+cu118   # Cài từ: https://pytorch.org/get-started/locally/
+
+# Tùy chọn (nếu export model)
+# onnx>=1.14.0         # export sang ONNX
+# onnxruntime>=1.16.0  # inference với ONNX (không cần GPU)
