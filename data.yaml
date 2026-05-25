@@ -13,11 +13,12 @@ val: valid/images              # ảnh validation  ← tên thư mục là "vali
 test: test/images              # ảnh test
 
 # Số lượng class  ← THIẾU trong file gốc, một số phiên bản ultralytics báo lỗi
-nc: 1
+nc: 2
 
 # Tên class theo đúng thứ tự index
 names:
-  0: fire
+  0: smoke
+  1: fire
 
 # ================================================================
 # HƯỚNG DẪN MỞ RỘNG SANG 2 CLASS (fire + smoke):
