@@ -96,7 +96,7 @@ def check_split(split_name: str, img_dir: Path, lbl_dir: Path, nc: int, class_na
     label_errors   = []
     total_boxes    = 0
     total_cls      = Counter()
-    background_imgs = []   # ảnh không có box nào (có thể là negative samples)
+    background_imgs = []   
 
     for img in images:
         lbl_path = lbl_dir / f"{img.stem}.txt"
@@ -135,6 +135,7 @@ def check_split(split_name: str, img_dir: Path, lbl_dir: Path, nc: int, class_na
     if background_imgs:
         print(f"\n  ℹ  Ảnh background (label trống): {len(background_imgs)}")
         print(f"     (Đây là negative samples – hợp lệ nếu chủ động thêm)")
+       
 
     # Label bị lỗi
     if label_errors:
