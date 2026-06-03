@@ -109,10 +109,6 @@ def print_items(title, items):
 
     if not items:
         print("    Không có")
-        return
-
-    for item in items:
-        print(f"    - {item}")
 
 
 def print_errors(error_files):
