@@ -1,0 +1,15 @@
+run_name,train_fire_001
+model,C:\Users\LAM\Downloads\LUU DU LIEU SINH VIEN\DEEP LEARNING\yolo11-smoke-fire-detection\runs\train\train_fire_001\weights\best.pt
+split,test
+timestamp,20260609_120233
+device,cuda
+conf,0.25
+iou,0.5
+train_best_epoch,76
+train_map50,0.71005
+train_map50_95,0.39399
+test_mAP50,0.566400
+test_mAP50-95,0.299467
+test_precision,0.757874
+test_recall,0.620072
+test_f1,0.682083
