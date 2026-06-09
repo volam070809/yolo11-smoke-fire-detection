@@ -1,140 +1,198 @@
 """
 predict_test.py – Predict ảnh / video / webcam
-Kết quả → runs/predict/
+Kết quả lưu tại: runs/predict/
 
 Cách dùng:
-  python src/predict_test.py                        # ảnh test mặc định
-  python src/predict_test.py --source video.mp4
-  python src/predict_test.py --source 0             # webcam
+  Chỉnh SOURCE trong phần CONFIG bên dưới
+  Sau đó chạy:
+    python src/predict_test.py
 """
-import sys, os, argparse
+
+import sys
+import time
 from pathlib import Path
 from datetime import datetime
+from collections import Counter
 
 try:
     from ultralytics import YOLO
-    import cv2
 except ImportError as e:
-    sys.exit(f"[ERROR] {e} – pip install ultralytics opencv-python")
+    sys.exit(f"[ERROR] {e} – pip install ultralytics")
 
-ROOT        = Path(__file__).resolve().parent.parent
-TRAIN_DIR   = ROOT / "runs" / "train"
+
+# ============================================================
+# CONFIG - CHỈNH THỦ CÔNG Ở ĐÂY
+# ============================================================
+
+# 1. Predict thư mục ảnh test mặc định
+SOURCE = "datasets/fire_data/test/images"
+
+# 2. Predict 1 ảnh cụ thể
+# SOURCE = "test.jpg"
+
+# 3. Predict video
+# SOURCE = "video.mp4"
+
+# 4. Predict webcam
+# SOURCE = "0"
+
+CONF = 0.4
+IMGSZ = 640
+IOU = 0.45
+
+SHOW = False        # True nếu muốn hiện cửa sổ predict
+SAVE_TXT = True    # True nếu muốn lưu file label .txt
+SAVE_CONF = True   # True nếu muốn lưu confidence vào file .txt
+
+
+# ============================================================
+# PATH
+# ============================================================
+
+ROOT = Path(__file__).resolve().parent.parent
+TRAIN_DIR = ROOT / "runs" / "train"
 PREDICT_DIR = ROOT / "runs" / "predict"
 
 
 def get_model():
     if TRAIN_DIR.exists():
         best_pt, best_score = None, -1
+
         for pt in TRAIN_DIR.glob("*/weights/best.pt"):
             csv_path = pt.parent.parent / "results.csv"
             score = -1
+
             if csv_path.exists():
                 try:
                     import csv as _csv
+
                     with open(csv_path, encoding="utf-8") as f:
                         for row in _csv.DictReader(f):
                             row = {k.strip(): v for k, v in row.items()}
-                            for k in ("metrics/mAP50-95(B)", "metrics/mAP50-95", "mAP50-95"):
+
+                            for k in (
+                                "metrics/mAP50-95(B)",
+                                "metrics/mAP50-95",
+                                "mAP50-95",
+                            ):
                                 if k in row and row[k] != "":
-                                    try: score = max(score, float(row[k]))
-                                    except ValueError: pass
+                                    try:
+                                        score = max(score, float(row[k]))
+                                    except ValueError:
+                                        pass
+
                 except Exception:
                     pass
-            # fallback: dùng mtime nếu không đọc được CSV
+
             if score == -1:
                 score = pt.stat().st_mtime * 1e-12
+
             if score > best_score:
                 best_score, best_pt = score, pt
+
         if best_pt:
             run_name = best_pt.parent.parent.name
-            print(f"[INFO] Dùng model tốt nhất: {run_name}  (mAP50-95={best_score:.4f})")
+            print(f"[INFO] Model run : {run_name}")
+            print(f"[INFO] Weight    : {best_pt}")
+            print(f"[INFO] mAP50-95 : {best_score:.4f}")
             return str(best_pt)
-    if Path("yolo11n.pt").exists(): return "yolo11n.pt"
+
+    default_model = ROOT / "yolo11n.pt"
+
+    if default_model.exists():
+        print(f"[INFO] Dùng model mặc định: {default_model}")
+        return str(default_model)
+
+    if Path("yolo11n.pt").exists():
+        print("[INFO] Dùng model mặc định: yolo11n.pt")
+        return "yolo11n.pt"
+
     sys.exit("[ERROR] Không tìm thấy model. Chạy train.py trước!")
 
 
-def alert(names):
-    if any("fire" in n.lower() or "smoke" in n.lower() for n in names):
-        print(f"  🔥 Phát hiện: {', '.join(set(names))}")
-        try:
-            print("\a", end="", flush=True) if os.name != "nt" else None
-        except Exception: pass
+def format_counter(counter):
+    if not counter:
+        return "Không có object"
+
+    return ", ".join(
+        f"{name}: {count}"
+        for name, count in counter.items()
+    )
 
 
-def predict_images(model, source, conf):
-    ts      = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = PREDICT_DIR / f"images_{ts}"
-    results = model.predict(source=source, save=True, imgsz=640, conf=conf,
-                             iou=0.45, project=str(out_dir.parent),
-                             name=out_dir.name, verbose=False)
-    total = sum(len(r.boxes) if r.boxes else 0 for r in results)
+def predict_source(model):
+    start_time = time.time()
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"predict_{ts}"
+    save_dir = PREDICT_DIR / run_name
+
+    source = int(SOURCE) if SOURCE == "0" else SOURCE
+
+    print("=" * 60)
+    print("YOLO PREDICTION")
+    print("=" * 60)
+    print(f"[INFO] Source   : {SOURCE}")
+    print(f"[INFO] Conf     : {CONF}")
+    print(f"[INFO] Img size : {IMGSZ}")
+    print(f"[INFO] IOU      : {IOU}")
+    print(f"[INFO] Save txt : {SAVE_TXT}")
+    print(f"[INFO] Save conf: {SAVE_CONF}")
+    print(f"[INFO] Show     : {SHOW}")
+
+    results = model.predict(
+        source=source,
+        conf=CONF,
+        imgsz=IMGSZ,
+        iou=IOU,
+        save=True,
+        show=SHOW,
+        save_txt=SAVE_TXT,
+        save_conf=SAVE_CONF,
+        show_labels=True,
+        show_conf=True,
+        show_boxes=True,
+        project=str(PREDICT_DIR),
+        name=run_name,
+        verbose=False,
+        stream=True
+    )
+
+    total_items = 0
+    total_boxes = 0
+    class_counter = Counter()
+
     for r in results:
-        if r.boxes: alert([r.names[int(c)] for c in r.boxes.cls])
-    print(f"[DONE] {total} detections / {len(results)} ảnh → {out_dir}")
+        total_items += 1
 
+        if r.boxes is not None and len(r.boxes) > 0:
+            total_boxes += len(r.boxes)
 
-def predict_video(model, source, conf, show=True):
-    is_cam = str(source) == "0"
-    cap    = cv2.VideoCapture(int(source) if is_cam else source)
-    if not cap.isOpened(): sys.exit(f"[ERROR] Không mở được: {source}")
+            for cls_id in r.boxes.cls:
+                class_name = r.names[int(cls_id)]
+                class_counter[class_name] += 1
 
-    fps, w, h = (cap.get(cv2.CAP_PROP_FPS) or 30,
-                 int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                 int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-    ts      = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = PREDICT_DIR / f"video_{ts}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    writer  = cv2.VideoWriter(str(out_dir / "output.avi"),
-                               cv2.VideoWriter_fourcc(*"XVID"), fps, (w, h))
-    frames, detects, last_alert = 0, 0, -999
+    elapsed = time.time() - start_time
 
-    try:
-        while True:
-            ret, frame = cap.read()
-            if not ret: break
-            frames += 1
-            res  = model.predict(source=frame, imgsz=640, conf=conf,
-                                  iou=0.45, verbose=False)
-            ann  = res[0].plot()
-            if res[0].boxes and len(res[0].boxes):
-                detects += 1
-                names = [res[0].names[int(c)] for c in res[0].boxes.cls]
-                if frames - last_alert > 30:
-                    alert(names); last_alert = frames
-                cv2.putText(ann, "FIRE/SMOKE DETECTED", (10, 40),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0,0,255), 3)
-            writer.write(ann)
-            if show:
-                cv2.imshow("Detector", ann)
-                k = cv2.waitKey(1) & 0xFF
-                if k == ord("q"): break
-                if k == ord("s"):
-                    snap = out_dir / f"snap_{frames}.jpg"
-                    cv2.imwrite(str(snap), ann)
-                    print(f"  Snap → {snap}")
-    finally:
-        cap.release(); writer.release()
-        if show: cv2.destroyAllWindows()
-    print(f"[DONE] {frames} frames, {detects} detections → {out_dir}")
+    print("=" * 60)
+    print("PREDICTION SUMMARY")
+    print("=" * 60)
+    print(f"[DONE] Số ảnh/frame xử lý : {total_items}")
+    print(f"[DONE] Tổng object detect : {total_boxes}")
+    print(f"[DONE] Theo từng class    : {format_counter(class_counter)}")
+    print(f"[DONE] Thời gian xử lý    : {elapsed:.2f}s")
+
+    if elapsed > 0:
+        print(f"[DONE] Tốc độ trung bình  : {total_items / elapsed:.2f} item/s")
+    else:
+        print("[DONE] Tốc độ trung bình  : N/A")
+
+    print(f"[DONE] Kết quả lưu tại    : {save_dir}")
 
 
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--source", default="datasets/fire_data/test/images")
-    p.add_argument("--conf",   type=float, default=0.4)
-    p.add_argument("--no-show", action="store_true")
-    args = p.parse_args()
-
-    model  = YOLO(get_model())
-    src    = args.source
-    src_p  = Path(src)
-    is_vid = src_p.exists() and src_p.suffix.lower() in {".mp4",".avi",".mov",".mkv",".webm"}
-    is_cam = src == "0"
-    is_img = src_p.exists() and (src_p.is_dir() or src_p.suffix.lower() in {".jpg",".jpeg",".png",".bmp"})
-
-    if is_img:        predict_images(model, src, args.conf)
-    elif is_vid or is_cam: predict_video(model, src, args.conf, show=not args.no_show)
-    else:             predict_images(model, src, args.conf)
+    model = YOLO(get_model())
+    predict_source(model)
 
 
 if __name__ == "__main__":
