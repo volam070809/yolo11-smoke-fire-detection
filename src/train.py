@@ -8,7 +8,7 @@ except ImportError:
 ROOT         = Path(__file__).resolve().parent.parent
 TRAIN_DIR    = ROOT / "runs" / "train"
 TRAIN_PREFIX = "train_fire"
-EPOCHS, IMGSZ, BATCH, MODEL = 50, 640, 8, "yolo11n.pt"
+EPOCHS, IMGSZ, BATCH, MODEL = 100, 640, 8, "yolo11n.pt"
 
 
 def get_device():
@@ -58,7 +58,7 @@ def main():
         hsv_s=0.7,
         hsv_v=0.4,
         mosaic=1.0,
-        mixup=0.1,
+        mixup=0,
         save=True,
         save_period=-1,
         plots=True,
